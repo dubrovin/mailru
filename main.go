@@ -59,6 +59,7 @@ func main() {
 				mu.Lock()
 				total += local_total
 				mu.Unlock()
+				<-k
 
 			}(url)
 		case <- quit:
