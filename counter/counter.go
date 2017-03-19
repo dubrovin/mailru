@@ -110,7 +110,7 @@ func (counter *Counter) Count() {
 							local_total++
 						}
 					}
-					fmt.Println(url, local_total)
+					fmt.Println("Count for ", url, local_total)
 
 					counter.mu.Lock()
 					counter.total += local_total
