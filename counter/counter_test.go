@@ -40,10 +40,13 @@ func TestCounter_Count(t *testing.T) {
 		t.Error(err)
 	}
 	testCntNum := 5
-	defer output.Close()
-	for i := 0; i < testCntNum; i++ {
-		output.WriteString("https://golang.org\n")
-	}
+	go func() {
+		defer output.Close()
+		for i := 0; i < testCntNum; i++ {
+			output.WriteString("https://golang.org\n")
+		}
+	}()
+
 
 	cntr.ScanFile(input)
 	time.Sleep(time.Second)

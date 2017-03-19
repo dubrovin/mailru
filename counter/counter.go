@@ -33,6 +33,15 @@ func NewCounter(maxGoroutines int, word string) *Counter {
 }
 
 func (counter *Counter) ScanFile(f *os.File) {
+	stats, err := f.Stat()
+	if err != nil {
+		fmt.Errorf("error while in getting stats, error: %v", err)
+		return
+	}
+	if (stats.Mode() & os.ModeCharDevice) != 0 {
+		f = os.Stdin
+		fmt.Println("Urls : ")
+	}
 	counter.wg.Add(1)
 	go func() {
 		defer counter.wg.Done()
