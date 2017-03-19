@@ -8,6 +8,9 @@ import (
 	"bufio"
 	"os"
 	"net/http"
+	"os/signal"
+	"syscall"
+	neturl "net/url"
 )
 
 type Counter struct {
@@ -17,7 +20,7 @@ type Counter struct {
 	urls          chan string
 	quit          chan struct{}
 	total         int
-	word          string
+	word          string //слово, которое будем искать
 }
 
 func NewCounter(maxGoroutines int, word string) *Counter {
@@ -32,6 +35,7 @@ func NewCounter(maxGoroutines int, word string) *Counter {
 	}
 }
 
+//ScanFile в отдельной горутине читает урлы и закидывает в канал
 func (counter *Counter) ScanFile(f *os.File) {
 	stats, err := f.Stat()
 	if err != nil {
@@ -47,14 +51,46 @@ func (counter *Counter) ScanFile(f *os.File) {
 		defer counter.wg.Done()
 		scanner := bufio.NewScanner(f)
 		for scanner.Scan() {
+
+			parsedUrl, err := neturl.Parse(scanner.Text())
+			if err != nil {
+				fmt.Println("Url error parsing", err)
+				return
+			}
 			counter.wg.Add(1)
-			counter.urls <- scanner.Text()
+			counter.urls <- parsedUrl.String()
 
 		}
 	}()
 }
 
+//waitForSignal останавливает чтение по сигналу
+func (counter *Counter) waitForSignal() {
+	signalChannel := make(chan os.Signal, 2)
+	signal.Notify(signalChannel, os.Interrupt, syscall.SIGTERM)
+	go func() {
+		sig := <-signalChannel
+		switch sig {
+		case os.Interrupt:
+			counter.wg.Done()
+			counter.quit <- struct{}{}
+		}
+	}()
+}
+
+func (counter *Counter) ReadUrl(url string) (string, error) {
+	resp, err := http.Get(url)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	return string(body), nil
+}
+
+//Count подсчитываем количество слов counter.word по каждому url
 func (counter *Counter) Count() {
+	counter.waitForSignal()
 	go func() {
 		for {
 			select {
@@ -63,28 +99,27 @@ func (counter *Counter) Count() {
 				go func(url string) {
 					defer counter.wg.Done()
 					local_total := 0
-					resp, err := http.Get(url)
+					body, err := counter.ReadUrl(url)
 					if err != nil {
 						fmt.Errorf("Error in request %v", err)
 						return
 					}
-					defer resp.Body.Close()
-					body, err := ioutil.ReadAll(resp.Body)
+
 					for _, w := range strings.Fields(string(body)) {
 						if strings.Contains(w, "Go") {
 							local_total++
 						}
 					}
 					fmt.Println(url, local_total)
+
 					counter.mu.Lock()
 					counter.total += local_total
 					counter.mu.Unlock()
-					<-counter.maxGoroutines
 
+					<-counter.maxGoroutines
 				}(url)
 			case <-counter.quit:
-				return
-
+				break
 			}
 		}
 	}()

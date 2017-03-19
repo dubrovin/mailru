@@ -10,6 +10,7 @@ import (
 
 func main() {
 	cntr := counter.NewCounter(5, "Go")
+
 	start := time.Now()
 	cntr.ScanFile(os.Stdin)
 	cntr.Count()
