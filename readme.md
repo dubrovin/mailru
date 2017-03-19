@@ -3,7 +3,7 @@
 В конце работы приложение выводит на экран общее кол-во найденных строк "Go" во всех запросах,
 например:
 ```
-$ echo -e 'https://golang.org\nhttps://golang.org\nhttps://golang.org' | go run 1.go
+$ echo -e 'https://golang.org\nhttps://golang.org\nhttps://golang.org' | go run main.go
 Count for https://golang.org: 9
 Count for https://golang.org: 9
 Count for https://golang.org: 9

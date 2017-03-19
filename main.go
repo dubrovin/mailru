@@ -10,6 +10,7 @@ import (
 	"io/ioutil"
 
 	"sync"
+	"time"
 )
 
 type Counter struct {
@@ -88,6 +89,10 @@ func (counter *Counter) Count() {
 
 func main() {
 	cntr := NewCounter(5, "Go")
+	start := time.Now()
 	cntr.ScanStdin()
 	cntr.Count()
+	end := time.Now()
+
+	fmt.Println(end.Sub(start).String())
 }
